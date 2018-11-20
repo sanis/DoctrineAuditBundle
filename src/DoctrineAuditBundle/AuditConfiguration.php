@@ -8,42 +8,26 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 class AuditConfiguration
 {
     /**
-     * @var string
+     * @var TokenStorage
      */
-    private $tablePrefix;
-
+    protected $securityTokenStorage;
     /**
-     * @var string
+     * @var RequestStack
      */
-    private $tableSuffix;
-
+    protected $requestStack;
     /**
      * @var array
      */
     private $ignoredColumns = [];
-
     /**
      * @var array
      */
     private $entities = [];
 
-    /**
-     * @var TokenStorage
-     */
-    protected $securityTokenStorage;
-
-    /**
-     * @var RequestStack
-     */
-    protected $requestStack;
-
     public function __construct(array $config, TokenStorage $securityTokenStorage, RequestStack $requestStack)
     {
         $this->securityTokenStorage = $securityTokenStorage;
         $this->requestStack = $requestStack;
-
-        $this->tablePrefix = $config['table_prefix'];
-        $this->tableSuffix = $config['table_suffix'];
         $this->ignoredColumns = $config['ignored_columns'];
 
         if (isset($config['entities']) && !empty($config['entities'])) {
@@ -88,33 +72,19 @@ class AuditConfiguration
     public function isAuditedField($entity, $field): bool
     {
         if (!\in_array($field, $this->ignoredColumns, true) && $this->isAudited($entity)) {
-            $class = \is_object($entity) ? \Doctrine\Common\Util\ClassUtils::getRealClass(\get_class($entity)) : $entity;
+            $class = \is_object($entity) ? \Doctrine\Common\Util\ClassUtils::getRealClass(
+                \get_class($entity)
+            ) : $entity;
             $entityOptions = $this->entities[$class];
 
-            return !isset($entityOptions['ignored_columns']) || !\in_array($field, $entityOptions['ignored_columns'], true);
+            return !isset($entityOptions['ignored_columns']) || !\in_array(
+                    $field,
+                    $entityOptions['ignored_columns'],
+                    true
+                );
         }
 
         return false;
-    }
-
-    /**
-     * Get the value of tablePrefix.
-     *
-     * @return string
-     */
-    public function getTablePrefix(): string
-    {
-        return $this->tablePrefix;
-    }
-
-    /**
-     * Get the value of tableSuffix.
-     *
-     * @return string
-     */
-    public function getTableSuffix(): string
-    {
-        return $this->tableSuffix;
     }
 
     /**

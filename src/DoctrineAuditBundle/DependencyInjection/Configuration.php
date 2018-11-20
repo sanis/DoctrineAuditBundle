@@ -16,18 +16,10 @@ class Configuration implements ConfigurationInterface
 
         $treeBuilder->root('dh_doctrine_audit')
             ->children()
-                ->scalarNode('table_prefix')
-                    ->defaultValue('')
-                ->end()
-                ->scalarNode('table_suffix')
-                    ->defaultValue('_audit')
-                ->end()
-
                 ->arrayNode('ignored_columns')
                     ->canBeUnset()
                     ->prototype('scalar')->end()
                 ->end()
-
                 ->arrayNode('entities')
                     ->canBeUnset()
                     ->prototype('array')

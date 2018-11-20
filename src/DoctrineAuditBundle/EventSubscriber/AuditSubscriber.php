@@ -4,6 +4,7 @@ namespace DH\DoctrineAuditBundle\EventSubscriber;
 
 use DH\DoctrineAuditBundle\AuditConfiguration;
 use DH\DoctrineAuditBundle\DBAL\AuditLogger;
+use DH\DoctrineAuditBundle\Entity\AuditLog;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\DBAL\Logging\LoggerChain;
 use Doctrine\DBAL\Logging\SQLLogger;
@@ -36,6 +37,7 @@ class AuditSubscriber implements EventSubscriber
 
     /**
      * Handles soft-delete events from Gedmo\SoftDeleteable filter.
+     *
      * @see https://symfony.com/doc/current/bundles/StofDoctrineExtensionsBundle/index.html
      *
      * @param LifecycleEventArgs $args
@@ -75,9 +77,13 @@ class AuditSubscriber implements EventSubscriber
         // extend the SQL logger
         $this->loggerBackup = $em->getConnection()->getConfiguration()->getSQLLogger();
         $loggerChain = new LoggerChain();
-        $loggerChain->addLogger(new AuditLogger(function () use ($em) {
-            $this->flush($em);
-        }));
+        $loggerChain->addLogger(
+            new AuditLogger(
+                function () use ($em) {
+                    $this->flush($em);
+                }
+            )
+        );
         if ($this->loggerBackup instanceof SQLLogger) {
             $loggerChain->addLogger($this->loggerBackup);
         }
@@ -151,6 +157,14 @@ class AuditSubscriber implements EventSubscriber
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function getSubscribedEvents(): array
+    {
+        return [Events::onFlush, 'preSoftDelete'];
+    }
+
+    /**
      * Flushes pending data.
      *
      * @param EntityManager $em
@@ -207,13 +221,17 @@ class AuditSubscriber implements EventSubscriber
     private function insert(EntityManager $em, $entity, array $ch): void
     {
         $meta = $em->getClassMetadata(\get_class($entity));
-        $this->audit($em, [
-            'action' => 'insert',
-            'blame' => $this->blame(),
-            'diff' => $this->diff($em, $entity, $ch),
-            'table' => $meta->table['name'],
-            'id' => $this->id($em, $entity),
-        ]);
+        $this->audit(
+            $em,
+            [
+                'action' => 'insert',
+                'entity' => \get_class($entity),
+                'blame' => $this->blame(),
+                'diff' => $this->diff($em, $entity, $ch),
+                'table' => $meta->table['name'],
+                'id' => $this->id($em, $entity),
+            ]
+        );
     }
 
     /**
@@ -233,13 +251,17 @@ class AuditSubscriber implements EventSubscriber
             return; // if there is no entity diff, do not log it
         }
         $meta = $em->getClassMetadata(\get_class($entity));
-        $this->audit($em, [
-            'action' => 'update',
-            'blame' => $this->blame(),
-            'diff' => $diff,
-            'table' => $meta->table['name'],
-            'id' => $this->id($em, $entity),
-        ]);
+        $this->audit(
+            $em,
+            [
+                'action' => 'update',
+                'entity' => \get_class($entity),
+                'blame' => $this->blame(),
+                'diff' => $diff,
+                'table' => $meta->table['name'],
+                'id' => $this->id($em, $entity),
+            ]
+        );
     }
 
     /**
@@ -255,13 +277,17 @@ class AuditSubscriber implements EventSubscriber
     private function remove(EntityManager $em, $entity, $id): void
     {
         $meta = $em->getClassMetadata(\get_class($entity));
-        $this->audit($em, [
-            'action' => 'remove',
-            'blame' => $this->blame(),
-            'diff' => $this->assoc($em, $entity),
-            'table' => $meta->table['name'],
-            'id' => $id,
-        ]);
+        $this->audit(
+            $em,
+            [
+                'action' => 'remove',
+                'entity' => \get_class($entity),
+                'blame' => $this->blame(),
+                'diff' => $this->assoc($em, $entity),
+                'table' => $meta->table['name'],
+                'id' => $id,
+            ]
+        );
     }
 
     /**
@@ -278,17 +304,21 @@ class AuditSubscriber implements EventSubscriber
     private function associate(EntityManager $em, $source, $target, array $mapping): void
     {
         $meta = $em->getClassMetadata(\get_class($source));
-        $this->audit($em, [
-            'action' => 'associate',
-            'blame' => $this->blame(),
-            'diff' => [
-                'source' => $this->assoc($em, $source),
-                'target' => $this->assoc($em, $target),
-                'table' => isset($mapping['joinTable']['name']) ?? '',
-            ],
-            'table' => $meta->table['name'],
-            'id' => $this->id($em, $source),
-        ]);
+        $this->audit(
+            $em,
+            [
+                'action' => 'associate',
+                'entity' => \get_class($source),
+                'blame' => $this->blame(),
+                'diff' => [
+                    'source' => $this->assoc($em, $source),
+                    'target' => $this->assoc($em, $target),
+                    'table' => isset($mapping['joinTable']['name']) ?? '',
+                ],
+                'table' => $meta->table['name'],
+                'id' => $this->id($em, $source),
+            ]
+        );
     }
 
     /**
@@ -306,32 +336,38 @@ class AuditSubscriber implements EventSubscriber
     private function dissociate(EntityManager $em, $source, $target, $id, array $mapping): void
     {
         $meta = $em->getClassMetadata(\get_class($source));
-        $this->audit($em, [
-            'action' => 'dissociate',
-            'blame' => $this->blame(),
-            'diff' => [
-                'source' => $this->assoc($em, $source),
-                'target' => $this->assoc($em, $target),
-                'table' => isset($mapping['joinTable']['name']) ?? '',
-            ],
-            'table' => $meta->table['name'],
-            'id' => $id,
-        ]);
+        $this->audit(
+            $em,
+            [
+                'action' => 'dissociate',
+                'entity' => \get_class($source),
+                'blame' => $this->blame(),
+                'diff' => [
+                    'source' => $this->assoc($em, $source),
+                    'target' => $this->assoc($em, $target),
+                    'table' => isset($mapping['joinTable']['name']) ?? '',
+                ],
+                'table' => $meta->table['name'],
+                'id' => $id,
+            ]
+        );
     }
 
     /**
      * Adds an entry to the audit table.
      *
      * @param EntityManager $em
-     * @param array         $data
+     * @param array $data
      *
      * @throws \Doctrine\DBAL\DBALException
      */
     private function audit(EntityManager $em, array $data): void
     {
-        $auditTable = $this->configuration->getTablePrefix().$data['table'].$this->configuration->getTableSuffix();
+        $auditTable = $em->getClassMetadata(AuditLog::class)->getTableName();
+
         $fields = [
             'type' => ':type',
+            'entity' => ':entity',
             'object_id' => ':object_id',
             'diffs' => ':diffs',
             'blame_id' => ':blame_id',
@@ -357,6 +393,7 @@ class AuditSubscriber implements EventSubscriber
         $statement->bindValue('blame_user', $data['blame']['username']);
         $statement->bindValue('ip', $data['blame']['client_ip']);
         $statement->bindValue('created_at', $dt->format('Y-m-d H:i:s'));
+        $statement->bindValue('entity', $data['entity']);
         $statement->execute();
     }
 
@@ -411,8 +448,8 @@ class AuditSubscriber implements EventSubscriber
                     ];
                 }
             } elseif ($meta->hasAssociation($fieldName) &&
-                $meta->isSingleValuedAssociation($fieldName) &&
-                $this->configuration->isAuditedField($entity, $fieldName)
+                      $meta->isSingleValuedAssociation($fieldName) &&
+                      $this->configuration->isAuditedField($entity, $fieldName)
             ) {
                 $o = $this->assoc($em, $old);
                 $n = $this->assoc($em, $new);
@@ -432,7 +469,7 @@ class AuditSubscriber implements EventSubscriber
      * Returns an array describing an association.
      *
      * @param EntityManager $em
-     * @param null          $association
+     * @param null $association
      *
      * @throws \Doctrine\DBAL\DBALException
      * @throws \Doctrine\ORM\Mapping\MappingException
@@ -449,9 +486,9 @@ class AuditSubscriber implements EventSubscriber
         $pkName = $meta->getSingleIdentifierFieldName();
         $pkValue = $this->id($em, $association);
         if (method_exists($association, '__toString')) {
-            $label = (string) $association;
+            $label = (string)$association;
         } else {
-            $label = \get_class($association).'#'.$pkValue;
+            $label = \get_class($association) . '#' . $pkValue;
         }
 
         return [
@@ -466,7 +503,7 @@ class AuditSubscriber implements EventSubscriber
      * Type converts the input value and returns it.
      *
      * @param EntityManager $em
-     * @param Type          $type
+     * @param Type $type
      * @param $value
      *
      * @throws \Doctrine\DBAL\DBALException
@@ -482,7 +519,7 @@ class AuditSubscriber implements EventSubscriber
             case Type::BIGINT:
             case Type::INTEGER:
             case Type::SMALLINT:
-                $convertedValue = (string) $value;
+                $convertedValue = (string)$value;
                 break;
 
             case Type::FLOAT:
@@ -527,13 +564,5 @@ class AuditSubscriber implements EventSubscriber
             'username' => $username,
             'client_ip' => $client_ip,
         ];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getSubscribedEvents(): array
-    {
-        return [Events::onFlush, 'preSoftDelete'];
     }
 }
