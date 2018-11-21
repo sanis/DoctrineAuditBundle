@@ -24,20 +24,14 @@ abstract class AuditLog
      */
     protected $type;
     /**
-     * @var int
-     * @ORM\Column(type="integer", nullable=false)
-     */
-    protected $objectId;
-    /**
      * @var string
      * @ORM\Column(type="json_array")
      */
     protected $diffs;
     /**
-     * @var int
-     * @ORM\Column(type="integer")
+     * @var object
      */
-    protected $blameId;
+    protected $blame;
     /**
      * @var string
      * @ORM\Column(type="string", length=100)
@@ -53,8 +47,52 @@ abstract class AuditLog
      * @ORM\Column(type="datetime", nullable=false)
      */
     protected $createdAt;
+    /**
+     * @var object
+     */
+    protected $object;
 
-    abstract public function getEntity();
+    abstract public function getEntity(): string;
+
+    /**
+     * @return object
+     */
+    public function getBlame(): object
+    {
+        return $this->blame;
+    }
+
+    /**
+     * @param object $blame
+     *
+     * @return AuditLog
+     */
+    public function setBlame(object $blame): AuditLog
+    {
+        $this->blame = $blame;
+
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getObject()
+    {
+        return $this->object;
+    }
+
+    /**
+     * @param mixed $object
+     *
+     * @return UserAuditLog
+     */
+    public function setObject($object)
+    {
+        $this->object = $object;
+
+        return $this;
+    }
 
     /**
      * @return int
@@ -97,26 +135,6 @@ abstract class AuditLog
     }
 
     /**
-     * @return int
-     */
-    public function getObjectId(): int
-    {
-        return $this->objectId;
-    }
-
-    /**
-     * @param int $objectId
-     *
-     * @return AuditLog
-     */
-    public function setObjectId(int $objectId): AuditLog
-    {
-        $this->objectId = $objectId;
-
-        return $this;
-    }
-
-    /**
      * @return string
      */
     public function getDiffs()
@@ -132,26 +150,6 @@ abstract class AuditLog
     public function setDiffs(string $diffs): AuditLog
     {
         $this->diffs = $diffs;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getBlameId(): int
-    {
-        return $this->blameId;
-    }
-
-    /**
-     * @param int $blameId
-     *
-     * @return AuditLog
-     */
-    public function setBlameId(int $blameId): AuditLog
-    {
-        $this->blameId = $blameId;
 
         return $this;
     }

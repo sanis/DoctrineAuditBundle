@@ -363,7 +363,7 @@ class AuditSubscriber implements EventSubscriber
      */
     private function audit(EntityManager $em, array $data): void
     {
-        $auditTable = $em->getClassMetadata(AuditLog::class)->getTableName();
+        $auditTable = 'audit_log';
 
         $fields = [
             'type' => ':type',
