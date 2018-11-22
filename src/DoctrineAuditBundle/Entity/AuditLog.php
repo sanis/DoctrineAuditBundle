@@ -34,12 +34,12 @@ abstract class AuditLog
     protected $blame;
     /**
      * @var string
-     * @ORM\Column(type="string", length=100)
+     * @ORM\Column(type="string", length=100, nullable=true)
      */
     protected $blameUser;
     /**
      * @var string
-     * @ORM\Column(type="string", length=45)
+     * @ORM\Column(type="string", length=45, nullable=true)
      */
     protected $ip;
     /**
@@ -57,7 +57,7 @@ abstract class AuditLog
     /**
      * @return object
      */
-    public function getBlame(): object
+    public function getBlame()
     {
         return $this->blame;
     }
@@ -157,7 +157,7 @@ abstract class AuditLog
     /**
      * @return string
      */
-    public function getBlameUser(): string
+    public function getBlameUser()
     {
         return $this->blameUser;
     }
@@ -177,7 +177,7 @@ abstract class AuditLog
     /**
      * @return string
      */
-    public function getIp(): string
+    public function getIp()
     {
         return $this->ip;
     }
