@@ -52,7 +52,7 @@ abstract class AuditLog
      */
     protected $object;
 
-    abstract public function getEntity(): string;
+    abstract public function getEntityName(): string;
 
     /**
      * @return object
